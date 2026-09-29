@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Client Login — 458. Agency</title>
+  <meta name="robots" content="noindex" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body class="app-body">
+  <header class="site-header">
+    <a class="brand" href="/" aria-label="458 Agency home">
+      <span class="brand-number">458.</span><span class="brand-agency">AGENCY</span>
+    </a>
+    <a class="header-link" href="/">Back to site</a>
+  </header>
+
+  <main class="auth-shell">
+    <section class="auth-card">
+      <p class="eyebrow">Client portal</p>
+      <h1 class="auth-title">Sign in.</h1>
+      <p class="auth-copy">Enter your email and we’ll send you a secure magic link. No password required.</p>
+
+      <form id="login-form" class="auth-form">
+        <label for="email">Email address</label>
+        <input id="email" name="email" type="email" autocomplete="email" placeholder="you@company.com" required />
+        <button class="button button-primary button-full" type="submit">Send magic link</button>
+      </form>
+
+      <p id="status" class="form-status" aria-live="polite"></p>
+    </section>
+  </main>
+
+  <script type="module" src="/portal.js"></script>
+</body>
+</html>
