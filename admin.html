@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Admin — 458. Agency</title>
+  <meta name="robots" content="noindex" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body class="app-body">
+  <header class="site-header app-header">
+    <a class="brand" href="/" aria-label="458 Agency home">
+      <span class="brand-number">458.</span><span class="brand-agency">AGENCY</span>
+    </a>
+    <div class="header-nav">
+      <a class="header-link" href="/dashboard.html">Dashboard</a>
+      <button id="sign-out" class="header-button" type="button">Sign out</button>
+    </div>
+  </header>
+
+  <main class="admin-shell">
+    <section class="admin-heading">
+      <div>
+        <p class="eyebrow">458 Admin</p>
+        <h1 class="dashboard-title">Clients</h1>
+      </div>
+      <button id="new-client" class="button button-primary" type="button">Add client</button>
+    </section>
+
+    <section id="admin-status" class="form-status"></section>
+
+    <section id="client-list" class="client-list"></section>
+
+    <dialog id="client-dialog" class="client-dialog">
+      <form id="client-form" method="dialog" class="admin-form">
+        <div class="dialog-head">
+          <div>
+            <p class="eyebrow">Client account</p>
+            <h2 id="dialog-title">Add client</h2>
+          </div>
+          <button id="close-dialog" class="icon-button" type="button" aria-label="Close">×</button>
+        </div>
+
+        <input id="client-id" type="hidden" />
+        <label>Company name<input id="company-name" required /></label>
+        <label>Client email<input id="client-email" type="email" required /></label>
+        <div class="form-grid">
+          <label>Google Ads customer ID<input id="google-customer-id" placeholder="123-456-7890" /></label>
+          <label>Meta ad account ID<input id="meta-account-id" placeholder="act_123456789" /></label>
+        </div>
+        <div class="form-grid">
+          <label>Commission rate (%)<input id="commission" type="number" min="0" step="0.01" placeholder="10" /></label>
+          <label class="checkbox-label"><input id="client-active" type="checkbox" checked /> Active client</label>
+        </div>
+        <label>Dashboard note<textarea id="reporting-note-input" rows="4" placeholder="Current focus, reporting notes or account status…"></textarea></label>
+
+        <button class="button button-primary button-full" type="submit">Save client</button>
+      </form>
+    </dialog>
+  </main>
+
+  <script type="module" src="/portal.js"></script>
+</body>
+</html>
