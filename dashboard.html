@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Dashboard — 458. Agency</title>
+  <meta name="robots" content="noindex" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body class="app-body">
+  <header class="site-header app-header">
+    <a class="brand" href="/" aria-label="458 Agency home">
+      <span class="brand-number">458.</span><span class="brand-agency">AGENCY</span>
+    </a>
+    <div class="header-nav">
+      <a id="admin-link" class="header-link is-hidden" href="/admin.html">Admin</a>
+      <button id="sign-out" class="header-button" type="button">Sign out</button>
+    </div>
+  </header>
+
+  <main class="dashboard-shell">
+    <section class="dashboard-intro">
+      <p class="eyebrow">Client dashboard</p>
+      <h1 id="client-name" class="dashboard-title">Loading…</h1>
+      <p id="client-meta" class="dashboard-meta"></p>
+    </section>
+
+    <section id="dashboard-content" class="dashboard-grid is-hidden">
+      <article class="metric-card">
+        <span>Google Ads</span>
+        <strong id="google-id">Not connected</strong>
+        <p>Account connection</p>
+      </article>
+      <article class="metric-card">
+        <span>Meta Ads</span>
+        <strong id="meta-id">Not connected</strong>
+        <p>Account connection</p>
+      </article>
+      <article class="metric-card">
+        <span>Commission</span>
+        <strong id="commission-rate">—</strong>
+        <p>Current agreement</p>
+      </article>
+    </section>
+
+    <section id="dashboard-note" class="dashboard-note is-hidden">
+      <p class="eyebrow">Account note</p>
+      <p id="reporting-note"></p>
+    </section>
+
+    <section id="dashboard-empty" class="empty-state is-hidden">
+      <h2>Your account is not configured yet.</h2>
+      <p>Your login works, but an admin still needs to attach your client profile.</p>
+    </section>
+  </main>
+
+  <script type="module" src="/portal.js"></script>
+</body>
+</html>
