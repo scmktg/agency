@@ -2,12 +2,76 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const SUPABASE_URL = 'https://duutmtrwjihmzaalvaii.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_MKeTfKrRgHTZIArtOpEDKg_0SwMakTJ';
-const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+const SITE_ORIGIN = 'https://458.agency';
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true,
+    flowType: 'implicit'
+  }
+});
+
+function safeNext(value) {
+  return value === '/admin' ? '/admin' : '/dashboard';
+}
+
+async function consumeMagicLinkSession() {
+  const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+  const accessToken = hash.get('access_token');
+  const refreshToken = hash.get('refresh_token');
+
+  if (accessToken && refreshToken) {
+    const { error } = await supabase.auth.setSession({
+      access_token: accessToken,
+      refresh_token: refreshToken
+    });
+    if (error) throw error;
+    history.replaceState({}, document.title, window.location.pathname);
+  }
+
+  const params = new URLSearchParams(window.location.search);
+  const code = params.get('code');
+  if (code) {
+    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    if (error) throw error;
+    history.replaceState({}, document.title, window.location.pathname);
+  }
+}
+
+async function getCurrentSession() {
+  await consumeMagicLinkSession();
+
+  const first = await supabase.auth.getSession();
+  if (first.data.session) return first.data.session;
+
+  return await new Promise((resolve) => {
+    let settled = false;
+    const finish = (value) => {
+      if (settled) return;
+      settled = true;
+      resolve(value);
+    };
+
+    const { data } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
+        data.subscription.unsubscribe();
+        finish(session || null);
+      }
+    });
+
+    setTimeout(() => {
+      data.subscription.unsubscribe();
+      finish(null);
+    }, 1200);
+  });
+}
 
 async function sessionOrRedirect(next = window.location.pathname) {
-  const { data: { session } } = await supabase.auth.getSession();
+  const session = await getCurrentSession();
   if (!session) {
-    window.location.href = '/login.html?next=' + encodeURIComponent(next);
+    window.location.href = '/login?next=' + encodeURIComponent(safeNext(next));
     return null;
   }
   return session;
@@ -21,19 +85,15 @@ function setStatus(message, kind = '') {
 }
 
 async function isAdmin() {
-  const { data, error } = await supabase
-    .from('admin_users')
-    .select('email')
-    .maybeSingle();
-
+  const { data, error } = await supabase.from('admin_users').select('email').maybeSingle();
   if (error) throw error;
   return Boolean(data);
 }
 
 async function setupLogin() {
-  const { data: { session } } = await supabase.auth.getSession();
+  const session = await getCurrentSession();
   const params = new URLSearchParams(location.search);
-  const next = params.get('next') || '/dashboard.html';
+  const next = safeNext(params.get('next'));
 
   if (session) {
     window.location.href = next;
@@ -48,7 +108,7 @@ async function setupLogin() {
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
-        emailRedirectTo: window.location.origin + next,
+        emailRedirectTo: SITE_ORIGIN + next,
         shouldCreateUser: true
       }
     });
@@ -66,14 +126,15 @@ async function setupLogin() {
 async function setupSignOut() {
   const button = document.getElementById('sign-out');
   if (!button) return;
+
   button.addEventListener('click', async () => {
     await supabase.auth.signOut();
-    window.location.href = '/login.html';
+    window.location.href = '/login';
   });
 }
 
 async function setupDashboard() {
-  const session = await sessionOrRedirect('/dashboard.html');
+  const session = await sessionOrRedirect('/dashboard');
   if (!session) return;
   await setupSignOut();
 
@@ -161,23 +222,19 @@ function openClientDialog(client = null) {
 }
 
 async function loadClients() {
-  const { data, error } = await supabase
-    .from('clients')
-    .select('*')
-    .order('company_name', { ascending: true });
-
+  const { data, error } = await supabase.from('clients').select('*').order('company_name', { ascending: true });
   if (error) throw error;
   renderClients(data || []);
 }
 
 async function setupAdmin() {
-  const session = await sessionOrRedirect('/admin.html');
+  const session = await sessionOrRedirect('/admin');
   if (!session) return;
   await setupSignOut();
 
   try {
     if (!(await isAdmin())) {
-      window.location.href = '/dashboard.html';
+      window.location.href = '/dashboard';
       return;
     }
 
@@ -222,7 +279,7 @@ async function setupAdmin() {
   }
 }
 
-const page = window.location.pathname;
-if (page.endsWith('/login.html') || page === '/login') setupLogin().catch(e => setStatus(e.message, 'error'));
-if (page.endsWith('/dashboard.html') || page === '/dashboard') setupDashboard();
-if (page.endsWith('/admin.html') || page === '/admin') setupAdmin();
+const page = window.location.pathname.replace(/\/$/, '');
+if (page === '/login' || page === '/login.html') setupLogin().catch(e => setStatus(e.message, 'error'));
+if (page === '/dashboard' || page === '/dashboard.html') setupDashboard();
+if (page === '/admin' || page === '/admin.html') setupAdmin();
