@@ -1,49 +1,51 @@
 # 458. Agency
 
-Minimal public site plus a private client portal.
+Minimal public site plus a private Supabase-powered client portal.
 
-## Public site
+## Pages
 
-The homepage is intentionally short:
-- Google Ads + Meta Ads only
-- research-first positioning
-- three-step process
-- no retainer / no setup fee / commission only
-
-## Client portal
-
-Pages:
-- `/login.html` — passwordless magic-link login
+- `/` — short public homepage
+- `/login.html` — passwordless email magic-link login
 - `/dashboard.html` — client dashboard
-- `/admin.html` — admin client management
+- `/admin.html` — client administration
 
-The portal uses Supabase Auth for magic links and a Supabase `clients` table for account configuration.
+## Supabase
 
-## Required setup
+The production project is `458` (`duutmtrwjihmzaalvaii`).
 
-1. Create a Supabase project.
-2. Run `supabase.sql` in the Supabase SQL editor.
-3. In Supabase Auth, add your production URL to the allowed redirect URLs:
-   - `https://458.agency/dashboard.html`
-   - `https://458.agency/admin.html`
-   - your Vercel preview URL equivalents if needed
-4. Add these environment variables in Vercel:
-   - `SUPABASE_URL`
-   - `SUPABASE_ANON_KEY`
-   - `SUPABASE_SERVICE_ROLE_KEY`
-   - `ADMIN_EMAILS` — comma-separated emails allowed into the admin area
-5. Redeploy.
+Database tables:
+- `admin_users`
+- `clients`
 
-Clients enter their email on the login page and receive a Supabase magic link. If their email matches an active record in `clients`, their dashboard loads the configured account details.
+Row Level Security is enabled. Clients can only read the active client record matching their authenticated email. Admins can view and manage all clients.
 
-## Current client fields
+The site uses the Supabase project URL and publishable key in `portal.js`. This key is intentionally public; privileged database access is controlled by authentication and RLS.
+
+## Remaining auth configuration
+
+In Supabase → Authentication → URL Configuration, set:
+
+Site URL:
+- `https://458.agency`
+
+Additional Redirect URLs:
+- `https://458.agency/dashboard.html`
+- `https://458.agency/admin.html`
+
+If preview deployments need magic-link testing, add the relevant Vercel preview URLs too.
+
+## Admin access
+
+Add each 458 administrator's email to `public.admin_users`. The user then signs in through the same client login page and will see the Admin link.
+
+## Client fields
 
 - company name
 - client email
 - Google Ads customer ID
 - Meta ad account ID
 - commission rate
-- dashboard/account note
-- active/inactive status
+- dashboard note
+- active / inactive
 
-The Google and Meta IDs are ready for the next integration step: pulling live advertising data into the dashboard.
+Google and Meta account IDs are ready for the next stage: live reporting integrations.
