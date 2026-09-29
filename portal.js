@@ -1,26 +1,13 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-let supabase;
-
-async function getConfig() {
-  const res = await fetch('/api/config');
-  if (!res.ok) throw new Error('Portal is not configured yet.');
-  return res.json();
-}
-
-async function getSupabase() {
-  if (supabase) return supabase;
-  const config = await getConfig();
-  supabase = createClient(config.supabaseUrl, config.supabaseAnonKey);
-  return supabase;
-}
+const SUPABASE_URL = 'https://duutmtrwjihmzaalvaii.supabase.co';
+const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_MKeTfKrRgHTZIArtOpEDKg_0SwMakTJ';
+const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
 
 async function sessionOrRedirect(next = window.location.pathname) {
-  const sb = await getSupabase();
-  const { data: { session } } = await sb.auth.getSession();
+  const { data: { session } } = await supabase.auth.getSession();
   if (!session) {
-    const target = encodeURIComponent(next);
-    window.location.href = '/login.html?next=' + target;
+    window.location.href = '/login.html?next=' + encodeURIComponent(next);
     return null;
   }
   return session;
@@ -33,20 +20,18 @@ function setStatus(message, kind = '') {
   el.dataset.kind = kind;
 }
 
-async function api(path, options = {}) {
-  const sb = await getSupabase();
-  const { data: { session } } = await sb.auth.getSession();
-  const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
-  if (session?.access_token) headers.Authorization = 'Bearer ' + session.access_token;
-  const res = await fetch(path, { ...options, headers });
-  const payload = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(payload.error || 'Request failed.');
-  return payload;
+async function isAdmin() {
+  const { data, error } = await supabase
+    .from('admin_users')
+    .select('email')
+    .maybeSingle();
+
+  if (error) throw error;
+  return Boolean(data);
 }
 
 async function setupLogin() {
-  const sb = await getSupabase();
-  const { data: { session } } = await sb.auth.getSession();
+  const { data: { session } } = await supabase.auth.getSession();
   const params = new URLSearchParams(location.search);
   const next = params.get('next') || '/dashboard.html';
 
@@ -57,17 +42,22 @@ async function setupLogin() {
 
   document.getElementById('login-form').addEventListener('submit', async (event) => {
     event.preventDefault();
-    const email = document.getElementById('email').value.trim();
+    const email = document.getElementById('email').value.trim().toLowerCase();
     setStatus('Sending secure link…');
-    const redirectTo = window.location.origin + next;
-    const { error } = await sb.auth.signInWithOtp({
+
+    const { error } = await supabase.auth.signInWithOtp({
       email,
-      options: { emailRedirectTo: redirectTo, shouldCreateUser: true }
+      options: {
+        emailRedirectTo: window.location.origin + next,
+        shouldCreateUser: true
+      }
     });
+
     if (error) {
       setStatus(error.message, 'error');
       return;
     }
+
     event.target.reset();
     setStatus('Check your inbox. Your magic link is on the way.', 'success');
   });
@@ -77,8 +67,7 @@ async function setupSignOut() {
   const button = document.getElementById('sign-out');
   if (!button) return;
   button.addEventListener('click', async () => {
-    const sb = await getSupabase();
-    await sb.auth.signOut();
+    await supabase.auth.signOut();
     window.location.href = '/login.html';
   });
 }
@@ -89,26 +78,34 @@ async function setupDashboard() {
   await setupSignOut();
 
   try {
-    const data = await api('/api/me');
-    if (data.isAdmin) document.getElementById('admin-link')?.classList.remove('is-hidden');
+    if (await isAdmin()) document.getElementById('admin-link')?.classList.remove('is-hidden');
 
-    if (!data.client) {
+    const email = session.user.email?.toLowerCase();
+    const { data: client, error } = await supabase
+      .from('clients')
+      .select('id,company_name,email,google_ads_customer_id,meta_ad_account_id,commission_rate,reporting_note,active')
+      .eq('email', email)
+      .eq('active', true)
+      .maybeSingle();
+
+    if (error) throw error;
+
+    if (!client) {
       document.getElementById('client-name').textContent = 'Welcome.';
-      document.getElementById('client-meta').textContent = session.user.email;
+      document.getElementById('client-meta').textContent = email || '';
       document.getElementById('dashboard-empty').classList.remove('is-hidden');
       return;
     }
 
-    const c = data.client;
-    document.getElementById('client-name').textContent = c.company_name;
-    document.getElementById('client-meta').textContent = c.email;
-    document.getElementById('google-id').textContent = c.google_ads_customer_id || 'Not connected';
-    document.getElementById('meta-id').textContent = c.meta_ad_account_id || 'Not connected';
-    document.getElementById('commission-rate').textContent = c.commission_rate == null ? '—' : c.commission_rate + '%';
+    document.getElementById('client-name').textContent = client.company_name;
+    document.getElementById('client-meta').textContent = client.email;
+    document.getElementById('google-id').textContent = client.google_ads_customer_id || 'Not connected';
+    document.getElementById('meta-id').textContent = client.meta_ad_account_id || 'Not connected';
+    document.getElementById('commission-rate').textContent = client.commission_rate == null ? '—' : client.commission_rate + '%';
     document.getElementById('dashboard-content').classList.remove('is-hidden');
 
-    if (c.reporting_note) {
-      document.getElementById('reporting-note').textContent = c.reporting_note;
+    if (client.reporting_note) {
+      document.getElementById('reporting-note').textContent = client.reporting_note;
       document.getElementById('dashboard-note').classList.remove('is-hidden');
     }
   } catch (error) {
@@ -164,8 +161,13 @@ function openClientDialog(client = null) {
 }
 
 async function loadClients() {
-  const data = await api('/api/admin-clients');
-  renderClients(data.clients || []);
+  const { data, error } = await supabase
+    .from('clients')
+    .select('*')
+    .order('company_name', { ascending: true });
+
+  if (error) throw error;
+  renderClients(data || []);
 }
 
 async function setupAdmin() {
@@ -174,8 +176,7 @@ async function setupAdmin() {
   await setupSignOut();
 
   try {
-    const me = await api('/api/me');
-    if (!me.isAdmin) {
+    if (!(await isAdmin())) {
       window.location.href = '/dashboard.html';
       return;
     }
@@ -187,25 +188,33 @@ async function setupAdmin() {
 
     document.getElementById('client-form').addEventListener('submit', async (event) => {
       event.preventDefault();
-      const payload = {
-        id: document.getElementById('client-id').value || null,
+
+      const id = document.getElementById('client-id').value || null;
+      const record = {
         company_name: document.getElementById('company-name').value.trim(),
         email: document.getElementById('client-email').value.trim().toLowerCase(),
         google_ads_customer_id: document.getElementById('google-customer-id').value.trim() || null,
         meta_ad_account_id: document.getElementById('meta-account-id').value.trim() || null,
         commission_rate: document.getElementById('commission').value === '' ? null : Number(document.getElementById('commission').value),
         active: document.getElementById('client-active').checked,
-        reporting_note: document.getElementById('reporting-note-input').value.trim() || null
+        reporting_note: document.getElementById('reporting-note-input').value.trim() || null,
+        updated_at: new Date().toISOString()
       };
 
       try {
         setStatus('Saving…');
-        await api('/api/admin-clients', { method: 'POST', body: JSON.stringify(payload) });
+        const query = id
+          ? supabase.from('clients').update(record).eq('id', id).select().single()
+          : supabase.from('clients').insert(record).select().single();
+
+        const { error } = await query;
+        if (error) throw error;
+
         document.getElementById('client-dialog').close();
         await loadClients();
         setStatus('Client saved.', 'success');
       } catch (error) {
-        setStatus(error.message, 'error');
+        setStatus(error.code === '23505' ? 'That email already has a client account.' : error.message, 'error');
       }
     });
   } catch (error) {
