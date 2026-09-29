@@ -397,7 +397,7 @@ footer p {
 .hero-short .hero-copy { margin-bottom:30px; }
 .micro-proof { margin:0; color:var(--grey); font-size:.88rem; font-weight:700; letter-spacing:.04em; }
 .compact-process {
-  display:grid; grid-template-columns:repeat(3,1fr);
+  display:grid; grid-template-columns:repeat(4,1fr);
   border-top:1px solid var(--line); border-bottom:1px solid var(--line);
 }
 .compact-process article { padding:34px 34px 38px 0; border-right:1px solid var(--line); }
